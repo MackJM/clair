@@ -55,6 +55,7 @@ func DefaultConfig() Config {
 		},
 		Updater: &clair.UpdaterConfig{
 			Interval: 1 * time.Hour,
+			Updaters: make(map[string]string),
 		},
 		API: &api.Config{
 			Port:       6060,

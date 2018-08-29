@@ -36,9 +36,9 @@ import (
 )
 
 const (
-	trackerGitURL = "https://git.launchpad.net/ubuntu-cve-tracker"
-	updaterFlag   = "ubuntuUpdater"
-	cveURL        = "http://people.ubuntu.com/~ubuntu-security/cve/%s"
+	defaultTrackerGitURL = "https://git.launchpad.net/ubuntu-cve-tracker"
+	updaterFlag          = "ubuntuUpdater"
+	cveURL               = "http://people.ubuntu.com/~ubuntu-security/cve/%s"
 )
 
 var (
@@ -75,10 +75,15 @@ var (
 
 type updater struct {
 	repositoryLocalPath string
+	trackerGitURL       string
+}
+
+func (u *updater) SetURL(url string) {
+	u.trackerGitURL = url
 }
 
 func init() {
-	vulnsrc.RegisterUpdater("ubuntu", &updater{})
+	vulnsrc.RegisterUpdater("ubuntu", &updater{trackerGitURL: defaultTrackerGitURL})
 }
 
 func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateResponse, err error) {
@@ -120,7 +125,7 @@ func (u *updater) Update(datastore database.Datastore) (resp vulnsrc.UpdateRespo
 		}
 
 		// Parse the vulnerability.
-		v, unknownReleases, err := parseUbuntuCVE(file)
+		v, unknownReleases, err := u.parseUbuntuCVE(file)
 		if err != nil {
 			return resp, err
 		}
@@ -167,7 +172,7 @@ func (u *updater) pullRepository() (commit string, err error) {
 			return "", vulnsrc.ErrFilesystem
 		}
 
-		cmd := exec.Command("git", "clone", trackerGitURL, ".")
+		cmd := exec.Command("git", "clone", u.trackerGitURL, ".")
 		cmd.Dir = u.repositoryLocalPath
 		if out, err := cmd.CombinedOutput(); err != nil {
 			u.Clean()
@@ -232,7 +237,7 @@ func collectModifiedVulnerabilities(repositoryLocalPath string) (map[string]stru
 
 }
 
-func parseUbuntuCVE(fileContent io.Reader) (vulnerability database.Vulnerability, unknownReleases map[string]struct{}, err error) {
+func (u *updater) parseUbuntuCVE(fileContent io.Reader) (vulnerability database.Vulnerability, unknownReleases map[string]struct{}, err error) {
 	unknownReleases = make(map[string]struct{})
 	readingDescription := false
 	scanner := bufio.NewScanner(fileContent)
@@ -347,7 +352,7 @@ func parseUbuntuCVE(fileContent io.Reader) (vulnerability database.Vulnerability
 
 	// If no link has been provided (CVE-2006-NNN0 for instance), add the link to the tracker
 	if vulnerability.Link == "" {
-		vulnerability.Link = trackerGitURL
+		vulnerability.Link = u.trackerGitURL
 	}
 
 	// If no priority has been provided (CVE-2007-0667 for instance), set the priority to Unknown

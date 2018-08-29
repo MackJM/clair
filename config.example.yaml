@@ -55,6 +55,14 @@ clair:
     # Frequency the database will be updated with vulnerabilities from the default data sources
     # The value 0 disables the updater entirely.
     interval: 2h
+    # You can change the url that the specific URL that the updater polls
+    # If blank or absent, the default url will be used
+    updaters:
+      alpine: https://github.com/alpinelinux/alpine-secdb
+      debian:
+      oracle:
+      rhel:
+      ubuntu:
 
   notifier:
     # Number of attempts before the notification is marked as failed to be sent

@@ -16,6 +16,7 @@ package clair
 
 import (
 	"math/rand"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -64,6 +65,7 @@ func init() {
 // UpdaterConfig is the configuration for the Updater service.
 type UpdaterConfig struct {
 	Interval time.Duration
+	Updaters map[string]string
 }
 
 // RunUpdater begins a process that updates the vulnerability database at
@@ -75,6 +77,17 @@ func RunUpdater(config *UpdaterConfig, datastore database.Datastore, st *stopper
 	if config == nil || config.Interval == 0 {
 		log.Info("updater service is disabled.")
 		return
+	}
+
+	for name, updater := range vulnsrc.Updaters() {
+		updaterURL, ok := config.Updaters[name]
+		if ok && updaterURL != "" {
+			if _, err := url.ParseRequestURI(updaterURL); err != nil {
+				log.WithField("updater name", name).Fatalf("'%s' us an invalid url", updaterURL)
+			}
+			updater.SetURL(updaterURL)
+			log.WithField("updater name", name).Infof("Vulnerability source was changed to '%s'", updaterURL)
+		}
 	}
 
 	whoAmI := uuid.New()
